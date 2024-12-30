@@ -1,27 +1,33 @@
 // import { GetServerSideProps } from 'next';
 
-import { Pokemon } from "@/pokemons";
+import { Pokemon, PokemonsResponse } from "@/pokemons";
 import { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 
 interface Props {
-  params: Promise<{ id: string }>;
+  params: Promise<{ name: string }>;
 }
 
-//! Solo se ejecuta en tiempo de construcción
 export async function generateStaticParams() {
-  const static151Pokemons = Array.from({ length: 50 }).map(
-    (v, i) => `${i + 1}`
-  );
-  return static151Pokemons.map((id) => ({ id: id }));
+  const data: PokemonsResponse = await fetch(
+    "https://pokeapi.co/api/v2/pokemon?limit=50"
+  ).then((res) => res.json());
+
+  const pokemons = data.results.map((pokemon) => ({
+    name: pokemon.name,
+  }));
+
+  return pokemons.map(({ name }) => ({
+    name: name,
+  }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   try {
-    const { id } = await params;
+    const { name } = await params;
 
-    const { name } = await getPokemonFromID(id);
+    const { id } = await getPokemonFromName(name);
 
     return {
       title: `#${id} - ${name}`,
@@ -35,9 +41,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-const getPokemonFromID = async (id: string): Promise<Pokemon> => {
+const getPokemonFromName = async (name: string): Promise<Pokemon> => {
   try {
-    const pokemon = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`, {
+    const pokemon = await fetch(`https://pokeapi.co/api/v2/pokemon/${name}`, {
       cache: "force-cache",
       next: {
         revalidate: 60 * 60 * 30 * 6,
@@ -52,9 +58,9 @@ const getPokemonFromID = async (id: string): Promise<Pokemon> => {
 };
 
 export default async function PokemonPage({ params }: Props) {
-  const { id } = await params;
+  const { name } = await params;
   // console.log({ params });
-  const pokemon = await getPokemonFromID(id);
+  const pokemon = await getPokemonFromName(name);
 
   return (
     <div className="flex mt-5 flex-col items-center text-slate-800">
